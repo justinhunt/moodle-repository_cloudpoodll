@@ -342,8 +342,6 @@ class repository_cloudpoodll extends repository
             'draft',
             $itemid,
             'timemodified DESC',
-            false,
-            0,
             false
         );
 
