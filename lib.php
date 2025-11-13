@@ -342,7 +342,9 @@ class repository_cloudpoodll extends repository
             'draft',
             $itemid,
             'timemodified DESC',
-            false
+            false,
+            0,
+            0
         );
 
         foreach ($files as $file) {
