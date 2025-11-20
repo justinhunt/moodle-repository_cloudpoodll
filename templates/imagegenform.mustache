@@ -38,7 +38,7 @@
 <div class="repo-cp-imagegen"{{#formid}} id="{{formid}}"{{/formid}}>
     <div class="repo-cp-field">
         <label class="repo-cp-label" for="{{formid}}-prompt">{{#str}} enterprompt, repository_cloudpoodll {{/str}}</label>
-    <textarea class="repo-cp-textarea form-control" id="{{formid}}-prompt" name="s" rows="3" placeholder="{{#str}} promptplaceholder, repository_cloudpoodll {{/str}}">{{prompt}}</textarea>
+    <textarea class="repo-cp-textarea form-control" id="{{formid}}-prompt" name="s" rows="3" placeholder="{{#canedit}}{{#str}} promptplaceholdercanedit, repository_cloudpoodll {{/str}}{{/canedit}}{{^canedit}}{{#str}} promptplaceholder, repository_cloudpoodll {{/str}}{{/canedit}}">{{prompt}}</textarea>
     </div>
 
     <div class="repo-cp-field">
@@ -55,14 +55,14 @@
         <div class="repo-cp-image-list">
             {{#showclearoption}}
                 <label class="repo-cp-radio">
-                    <input type="radio" name="selectedimage" value=""{{#nocurrent}} checked{{/nocurrent}}>
+                    <input type="radio" name="selectedimage" id="repo-cp-radio-noimageselected" value=""{{#nocurrent}} checked{{/nocurrent}} onclick="document.getElementById('{{formid}}-style').disabled = false;">
                     <span class="repo-cp-radio-noimage">{{#str}} noimagelabel, repository_cloudpoodll {{/str}}</span>
                 </label>
             {{/showclearoption}}
 
             {{#images}}
                 <label class="repo-cp-radio">
-                    <input type="radio" name="selectedimage" value="{{title}}"{{#selected}} checked{{/selected}}>
+                    <input type="radio" name="selectedimage" value="{{title}}"{{#selected}} checked{{/selected}} onclick="document.getElementById('{{formid}}-style').disabled = true;">
                     <span class="repo-cp-radio-thumb">
                         {{#realthumbnail}}
                             <img src="{{realthumbnail}}" alt="" loading="lazy">

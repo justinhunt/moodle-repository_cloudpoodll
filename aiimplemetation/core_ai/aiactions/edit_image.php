@@ -6,18 +6,18 @@ require_once dirname(__FILE__) . '/responses/response_edit_image.php';
 
 class edit_image extends generate_image {
     /**
-     * Create a new instance of the generate_image action.
+     * Create a new instance of the edit_image action.
      *
      * It’s responsible for performing any setup tasks,
      * such as getting additional data from the database etc.
      *
-     * @param int $contextid The context id the action was created in.
      * @param int $userid The user id making the request.
      * @param string $prompttext The prompt text used to generate the image.
      * @param string $quality The quality of the generated image.
      * @param string $aspectratio The aspect ratio of the generated image.
      * @param int $numimages The number of images to generate.
      * @param string $style The visual style of the generated image.
+     * @param \stored_file $stored_file The file to edit.
      */
     public function __construct(
         int $contextid,
