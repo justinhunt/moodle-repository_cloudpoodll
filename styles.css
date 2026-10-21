@@ -129,3 +129,27 @@ div.repository_cloudpoodll div.fp-content:has( div.fp-error.nofilesavailable) {
 .repository_cloudpoodll .repo-cp-image-list .repo-cp-radio input[name="selectedimage"]:focus {
     box-shadow: 0 0;
 }
+
+.repository_cloudpoodll .fp-toolbar div.repo-cp-recorder {
+    display: flex;
+    justify-content: center;
+}
+
+.repository_cloudpoodll .fp-toolbar iframe.repo-cp-recorder-frame {
+    border: 0;
+    max-width: 100%;
+}
+
+body.repository_cloudpoodll_recorderpage {
+    background: transparent;
+}
+
+.repo-cp-recorderpage .repo-cp-recorder-status {
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.repo-cp-recorderpage .repo-cp-recorder-status[hidden],
+.repo-cp-recorderpage .repo-cp-recorder-spinner[hidden] {
+    display: none;
+}

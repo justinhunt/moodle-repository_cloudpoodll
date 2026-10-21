@@ -1,0 +1,74 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template repository_cloudpoodll/recorder
+
+    The Cloud Poodll recorder container on the recorder page. The data attributes are read by
+    repository_cloudpoodll/cloudpoodll, which loads the recorder into an iframe.
+
+    Example context (json):
+    {
+        "recid": "repository_cloudpoodll_therecorder",
+        "dataid": "therecorder",
+        "parent": "https://example.com",
+        "localloader": "/repository/cloudpoodll/poodlllocalloader.php",
+        "cloudpoodllurl": "https://cloud.poodll.com",
+        "media": "audio",
+        "appid": "repository_cloudpoodll",
+        "owner": "0123456789abcdef",
+        "type": "fresh",
+        "width": 400,
+        "height": 300,
+        "timelimit": 0,
+        "transcode": 1,
+        "transcribe": 0,
+        "subtitle": 0,
+        "language": "en-US",
+        "expiredays": 1,
+        "region": "useast1",
+        "hints": "",
+        "token": "abc"
+    }
+}}
+<div class="repo-cp-recorderpage">
+    <div class="repo-cp-recorder-cont"
+         id="{{recid}}"
+         data-id="{{dataid}}"
+         data-parent="{{parent}}"
+         data-localloader="{{localloader}}"
+         data-cloudpoodllurl="{{cloudpoodllurl}}"
+         data-media="{{media}}"
+         data-appid="{{appid}}"
+         data-owner="{{owner}}"
+         data-type="{{type}}"
+         data-width="{{width}}"
+         data-height="{{height}}"
+         data-timelimit="{{timelimit}}"
+         data-transcode="{{transcode}}"
+         data-transcribe="{{transcribe}}"
+         data-subtitle="{{subtitle}}"
+         data-language="{{language}}"
+         data-expiredays="{{expiredays}}"
+         data-region="{{region}}"
+         data-hints="{{hints}}"
+         data-token="{{token}}">
+    </div>
+    <div class="repo-cp-recorder-status" role="status" aria-live="polite" hidden>
+        <span class="repo-cp-recorder-spinner spinner-border spinner-border-sm" aria-hidden="true"></span>
+        <span class="repo-cp-recorder-message"></span>
+    </div>
+</div>

@@ -25,18 +25,25 @@ namespace repository_cloudpoodll;
  */
 class utils {
 
-     // Get the Cloud Poodll Server URL
-    public static function get_cloud_poodll_server()
-    {
-        $conf = get_config(constants::M_COMPONENT);
-        if (isset($conf->cloudpoodllserver) && !empty($conf->cloudpoodllserver)) {
-            return 'https://' . $conf->cloudpoodllserver;
-        } else {
-            return 'https://' . constants::M_DEFAULT_CLOUDPOODLL;
+    /**
+     * Get the Cloud Poodll server URL, without a trailing slash.
+     *
+     * The repository type settings are stored under the type name (cloudpoodll), not the component.
+     *
+     * @return string
+     */
+    public static function get_cloud_poodll_server() {
+        $server = get_config(constants::M_SHORTNAME, 'cloudpoodllserver');
+        $server = trim((string) $server);
+        if ($server === '') {
+            $server = constants::M_DEFAULT_CLOUDPOODLL;
         }
+        if (strpos($server, 'https://') !== 0 && strpos($server, 'http://') !== 0) {
+            $server = 'https://' . $server;
+        }
+        return rtrim($server, '/');
     }
 
-    
     // we use curl to fetch transcripts from AWS and Tokens from cloudpoodll
     // this is our helper
     public static function curl_fetch($url, $postdata = false, $ispost = false)
@@ -353,4 +360,115 @@ class utils {
 
 
 
+
+    /**
+     * Is this URL a converted recording in one of the Poodll output buckets?
+     *
+     * The URL comes back from the browser, so only fetch it if it points at a Poodll bucket.
+     * Both virtual-hosted (bucket.s3.region.amazonaws.com) and path-style (s3-region.amazonaws.com/bucket)
+     * URLs are used, depending on the region.
+     *
+     * @param string $url
+     * @return bool
+     */
+    public static function is_poodll_media_url($url) {
+        $bits = parse_url((string) $url);
+        if (!$bits || ($bits['scheme'] ?? '') !== 'https' || empty($bits['host']) || empty($bits['path'])) {
+            return false;
+        }
+        if (isset($bits['user']) || isset($bits['pass']) || isset($bits['port'])) {
+            return false;
+        }
+        $host = strtolower($bits['host']);
+        $bucket = 'poodll-(audio|video)processing-out[a-z0-9-]*';
+        $s3 = 's3[a-z0-9.-]*\.amazonaws\.com(\.cn)?';
+        if (preg_match('/^' . $bucket . '\.' . $s3 . '$/', $host)) {
+            return true;
+        }
+        if (preg_match('/^' . $s3 . '$/', $host) && preg_match('#^/' . $bucket . '/#', $bits['path'])) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Has the converted recording arrived in the bucket yet?
+     *
+     * Until the conversion is finished the object does not exist and S3 answers 403 (AccessDenied).
+     *
+     * @param string $url a URL that passed is_poodll_media_url()
+     * @return bool
+     */
+    public static function is_media_ready($url) {
+        global $CFG;
+        require_once($CFG->libdir . '/filelib.php');
+
+        $curl = new \curl();
+        $curl->head($url, ['CURLOPT_TIMEOUT' => 15]);
+        $info = $curl->get_info();
+        if ($curl->get_errno() || empty($info['http_code']) || (int) $info['http_code'] !== 200) {
+            return false;
+        }
+        // A zero byte object is not a finished conversion.
+        return !isset($info['download_content_length']) || (int) $info['download_content_length'] !== 0;
+    }
+
+    /**
+     * Create a system level repository instance for each mode that does not have one yet.
+     *
+     * Called when the repository type is enabled, and on upgrade from the image-only version.
+     *
+     * @return void
+     */
+    public static function create_default_instances() {
+        global $CFG, $DB;
+        require_once($CFG->dirroot . '/repository/lib.php');
+
+        $type = $DB->get_record('repository', ['type' => constants::M_SHORTNAME]);
+        if (!$type) {
+            return;
+        }
+
+        $existingmodes = [];
+        $instances = $DB->get_records('repository_instances', ['typeid' => $type->id]);
+        foreach ($instances as $instance) {
+            $mode = $DB->get_field(
+                'repository_instance_config',
+                'value',
+                ['instanceid' => $instance->id, 'name' => 'mode']
+            );
+            if ($mode === false || $mode === null || $mode === '') {
+                // Instances from before recording was added are image generators.
+                $mode = constants::MODE_IMAGE;
+                $DB->delete_records('repository_instance_config', ['instanceid' => $instance->id, 'name' => 'mode']);
+                $DB->insert_record(
+                    'repository_instance_config',
+                    (object) ['instanceid' => $instance->id, 'name' => 'mode', 'value' => $mode]
+                );
+            }
+            $existingmodes[$mode] = true;
+        }
+
+        $defaults = [
+            constants::MODE_IMAGE => ['recorderskin' => '', 'timelimit' => 0],
+            constants::MODE_AUDIO => ['recorderskin' => constants::SKIN_FRESH, 'timelimit' => 0],
+            constants::MODE_VIDEO => ['recorderskin' => constants::SKIN_BMR, 'timelimit' => 0],
+        ];
+        foreach ($defaults as $mode => $options) {
+            if (isset($existingmodes[$mode])) {
+                continue;
+            }
+            $options['mode'] = $mode;
+            $options['name'] = get_string('instancename_' . $mode, constants::M_COMPONENT);
+            \repository::static_function(
+                constants::M_SHORTNAME,
+                'create',
+                constants::M_SHORTNAME,
+                0,
+                \context_system::instance(),
+                $options
+            );
+        }
+        \cache::make('core', 'repositories')->purge();
+    }
 }

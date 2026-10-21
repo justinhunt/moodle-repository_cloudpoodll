@@ -34,11 +34,11 @@ require_login(0, false);
 $systemcontext = context_system::instance();
 
 if (has_capability('moodle/site:config', $systemcontext)) {
-    $apiuser = get_config(constants::M_COMPONENT, 'apiuser');
-    $apisecret = get_config(constants::M_COMPONENT, 'apisecret');
+    $apiuser = get_config(constants::M_SHORTNAME, 'apiuser');
+    $apisecret = get_config(constants::M_SHORTNAME, 'apisecret');
     $force = true;
     if ($apiuser && $apisecret) {
         utils::fetch_token($apiuser, $apisecret, $force);
     }
 }
-redirect($CFG->wwwroot . '/admin/settings.php?section=repositorysettingscloudpoodll');
+redirect($CFG->wwwroot . constants::M_PLUGINSETTINGS);

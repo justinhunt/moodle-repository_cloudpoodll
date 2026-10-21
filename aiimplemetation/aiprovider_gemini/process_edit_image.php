@@ -96,7 +96,8 @@ class process_edit_image extends process_generate_image {
      */
     #[\Override]
     protected function get_model(): string {
-        return 'gemini-2.5-flash-image';
+        $model = get_config(\repository_cloudpoodll\constants::M_SHORTNAME, 'geminieditmodel');
+        return empty($model) ? 'gemini-2.5-flash-image' : $model;
     }
 
 }

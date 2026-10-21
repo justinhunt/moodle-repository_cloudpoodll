@@ -39,9 +39,12 @@
 $string['apiprovider'] = 'Api provider';
 $string['apiprovider_help'] = 'Choose api provider to use in image generation';
 $string['configplugin'] = 'Cloud Poodll configuration';
-$string['pluginname'] = 'Cloud Poodll (Image Generator)';
-$string['pluginname_help'] = 'Generate images from text prompts and insert them directly via the file picker.';
-$string['privacy:metadata'] = 'The Cloud Poodll repository plugin does not store personal data.';
+$string['pluginname'] = 'Cloud Poodll';
+$string['pluginname_help'] = 'Generate images from text prompts, or record audio and video, and insert them directly via the file picker.';
+$string['privacy:metadata:cloudpoodll'] = 'Image prompts, images and recordings are sent to Cloud Poodll for processing. Recordings are deleted from Cloud Poodll after one day.';
+$string['privacy:metadata:cloudpoodll:media'] = 'Images to edit, and audio and video recordings to convert.';
+$string['privacy:metadata:cloudpoodll:owner'] = 'A hash of the username, used to identify who made the request.';
+$string['privacy:metadata:cloudpoodll:prompt'] = 'The text prompt used to generate or edit an image.';
 $string['configapikey'] = 'Cloud Poodll API key';
 $string['configapikey_desc'] = 'Optional: If set, used when calling the external service. Not required for the built-in demo generator.';
 $string['enterprompt'] = 'Enter a prompt...';
@@ -103,3 +106,37 @@ $string['notokenincache'] = "Refresh to see license information. Contact Poodll 
 $string['nocredentials'] = 'API user and secret not entered. Please enter them on <a href="{$a}">the settings page.</a> You can get them from <a href="https://poodll.com/member">Poodll.com.</a>';
 $string['novalidcredentials'] = 'API user and secret were rejected and could not gain access. Please check them on <a href="{$a}">the settings page.</a> You can get them from <a href="https://poodll.com/member">Poodll.com.</a>';
 $string['nosubscriptions'] = "There is no current subscription for this site/plugin.";
+
+// Repository instances.
+$string['instancename_audio'] = 'Cloud Poodll Audio';
+$string['instancename_image'] = 'Cloud Poodll Image';
+$string['instancename_video'] = 'Cloud Poodll Video';
+$string['mode'] = 'Mode';
+$string['mode_audio'] = 'Record audio';
+$string['mode_help'] = 'What this repository does: generate and edit images from text prompts, or record audio (MP3) or video (MP4).';
+$string['mode_image'] = 'Generate images';
+$string['mode_video'] = 'Record video';
+$string['recorderskin'] = 'Recorder skin';
+$string['recorderskin_help'] = 'The look of the recorder. Fresh is for audio only, and Screen (screen recording) is for video only.';
+$string['skin123'] = '1-2-3';
+$string['skinbmr'] = 'Burnt Rose';
+$string['skinfresh'] = 'Fresh';
+$string['skinnotformode'] = 'This recorder skin cannot be used for this mode.';
+$string['skinonce'] = 'Once';
+$string['skinplain'] = 'Plain';
+$string['skinscreen'] = 'Screen recorder';
+$string['timelimit'] = 'Recording time limit';
+$string['timelimit_help'] = 'The longest recording allowed. Set to 0 for no limit.';
+$string['timelimitnegative'] = 'The time limit cannot be negative.';
+
+// Recorder progress.
+$string['recordingconverting'] = 'Converting your recording. This can take a minute or two...';
+$string['recordingfailed'] = 'Sorry, there was a problem with the recording. Please try again.';
+$string['recordingnofilepicker'] = 'The recording is ready, but the file picker could not be found. Please close it and try again.';
+$string['recordingready'] = 'Your recording is ready. Fetching it...';
+$string['recordingstarted'] = 'Recording...';
+$string['recordingtimeout'] = 'The recording is taking too long to convert. Please try again.';
+$string['geminieditmodel'] = 'Gemini image editing model';
+$string['geminieditmodel_help'] = 'The Gemini (Nano Banana) model used when editing images with the Gemini AI provider.';
+$string['openaieditmodel'] = 'OpenAI image editing model';
+$string['openaieditmodel_help'] = 'The GPT Image model used when editing images with the OpenAI AI provider. Editing from a text prompt needs GPT Image 2 or later, so choosing GPT Image 1.5 turns image editing off. Image generation still uses the model set on the OpenAI provider.';

@@ -31,9 +31,12 @@ require_once($CFG->dirroot . '/repository/lib.php');
 use repository_cloudpoodll\constants;
 use repository_cloudpoodll\utils;
 use repository_cloudpoodll\imagegen;
+use repository_cloudpoodll\recorder;
 
 /**
- * Repository implementation for generating images from prompts.
+ * Repository implementation for generating images from prompts, and recording audio and video.
+ *
+ * Each repository instance has a mode (image, audio or video), so each shows up separately in the file picker.
  */
 class repository_cloudpoodll extends repository
 {
@@ -52,8 +55,56 @@ class repository_cloudpoodll extends repository
         return FILE_INTERNAL;
     }
 
+    /**
+     * Supported file types: images, audio or video, depending on the mode.
+     * @return array
+     */
     public function supported_filetypes() {
-        return array('web_image');
+        switch ($this->get_mode()) {
+            case constants::MODE_AUDIO:
+                return ['web_audio'];
+            case constants::MODE_VIDEO:
+                return ['web_video'];
+            default:
+                return ['web_image'];
+        }
+    }
+
+    /**
+     * What this instance does: generate images, or record audio or video.
+     *
+     * Instances from before recording was added have no mode, and are image generators.
+     *
+     * @return string one of the constants::MODE_* values
+     */
+    public function get_mode() {
+        $mode = $this->get_option('mode');
+        if (in_array($mode, [constants::MODE_AUDIO, constants::MODE_VIDEO], true)) {
+            return $mode;
+        }
+        return constants::MODE_IMAGE;
+    }
+
+    /**
+     * Is this an audio or video recording instance?
+     *
+     * @return bool
+     */
+    public function is_recorder() {
+        return $this->get_mode() !== constants::MODE_IMAGE;
+    }
+
+    /**
+     * The recorder for an audio or video instance.
+     *
+     * @return recorder
+     */
+    public function get_recorder() {
+        return new recorder(
+            $this->get_mode(),
+            (string) $this->get_option('recorderskin'),
+            (int) $this->get_option('timelimit')
+        );
     }
 
     /**
@@ -103,7 +154,7 @@ class repository_cloudpoodll extends repository
      * @param string $classname repository class name
      */
     public static function type_config_form($mform, $classname = 'repository') {
-        parent::type_config_form($mform);
+        parent::type_config_form($mform, $classname);
 
         $strrequired = get_string('required');
 
@@ -126,6 +177,29 @@ class repository_cloudpoodll extends repository
         $mform->setType('apiprovider', PARAM_INT);
         $mform->setDefault('apiprovider', constants::CLOUDPOODLL_OPTION);
         $mform->addHelpButton('apiprovider', 'apiprovider', constants::M_COMPONENT);
+
+        // Gemini model used for image editing (Nano Banana).
+        $geminimodels = [
+            'gemini-2.5-flash-image' => 'Nano Banana (gemini-2.5-flash-image)',
+            'gemini-3-pro-image-preview' => 'Nano Banana Pro (gemini-3-pro-image-preview)',
+            'gemini-3.1-flash-image-preview' => 'Nano Banana 2 (gemini-3.1-flash-image-preview)',
+            'gemini-nano-banana-2.1' => 'Nano Banana 2.1 (gemini-nano-banana-2.1)',
+        ];
+        $mform->addElement('select', 'geminieditmodel', get_string('geminieditmodel', constants::M_COMPONENT), $geminimodels);
+        $mform->setType('geminieditmodel', PARAM_TEXT);
+        $mform->setDefault('geminieditmodel', 'gemini-2.5-flash-image');
+        $mform->addHelpButton('geminieditmodel', 'geminieditmodel', constants::M_COMPONENT);
+
+        // OpenAI model used for image editing. Only the GPT Image models can edit from a prompt alone.
+        $openaimodels = [
+            'gpt-image-2.5-flare' => 'GPT Image 2.5 Flare (gpt-image-2.5-flare)',
+            'gpt-image-2.5-sunburst' => 'GPT Image 2.5 Sunburst (gpt-image-2.5-sunburst)',
+            'gpt-image-1.5' => 'GPT Image 1.5 (gpt-image-1.5)',
+        ];
+        $mform->addElement('select', 'openaieditmodel', get_string('openaieditmodel', constants::M_COMPONENT), $openaimodels);
+        $mform->setType('openaieditmodel', PARAM_TEXT);
+        $mform->setDefault('openaieditmodel', 'gpt-image-2.5-flare');
+        $mform->addHelpButton('openaieditmodel', 'openaieditmodel', constants::M_COMPONENT);
 
         // API User.
         $mform->addElement('text', 'apiuser', get_string('apiuser', constants::M_COMPONENT));
@@ -162,12 +236,74 @@ class repository_cloudpoodll extends repository
     public static function get_type_option_names() {
         return [
                 'apiprovider',
+                'geminieditmodel',
+                'openaieditmodel',
                 'cloudpoodllserver',
                 'apiuser',
                 'apisecret',
                 'awsregion',
-                'pluginname',
             ];
+    }
+
+    /**
+     * Option names of each repository instance.
+     *
+     * @return array
+     */
+    public static function get_instance_option_names() {
+        return ['mode', 'recorderskin', 'timelimit'];
+    }
+
+    /**
+     * Instance settings: what the instance does, and how the recorder looks.
+     *
+     * @param MoodleQuickForm $mform
+     */
+    public static function instance_config_form($mform) {
+        $modes = [
+            constants::MODE_IMAGE => get_string('mode_image', constants::M_COMPONENT),
+            constants::MODE_AUDIO => get_string('mode_audio', constants::M_COMPONENT),
+            constants::MODE_VIDEO => get_string('mode_video', constants::M_COMPONENT),
+        ];
+        $mform->addElement('select', 'mode', get_string('mode', constants::M_COMPONENT), $modes);
+        $mform->setDefault('mode', constants::MODE_IMAGE);
+        $mform->addHelpButton('mode', 'mode', constants::M_COMPONENT);
+
+        $skins = recorder::get_skin_options(constants::MODE_AUDIO) + recorder::get_skin_options(constants::MODE_VIDEO);
+        $mform->addElement('select', 'recorderskin', get_string('recorderskin', constants::M_COMPONENT), $skins);
+        $mform->setDefault('recorderskin', constants::SKIN_FRESH);
+        $mform->addHelpButton('recorderskin', 'recorderskin', constants::M_COMPONENT);
+        $mform->hideIf('recorderskin', 'mode', 'eq', constants::MODE_IMAGE);
+
+        $mform->addElement(
+            'duration',
+            'timelimit',
+            get_string('timelimit', constants::M_COMPONENT),
+            ['optional' => false, 'defaultunit' => MINSECS]
+        );
+        $mform->setDefault('timelimit', 0);
+        $mform->addHelpButton('timelimit', 'timelimit', constants::M_COMPONENT);
+        $mform->hideIf('timelimit', 'mode', 'eq', constants::MODE_IMAGE);
+    }
+
+    /**
+     * Check the recorder skin suits the mode.
+     *
+     * @param moodleform $mform
+     * @param array $data
+     * @param array $errors
+     * @return array
+     */
+    public static function instance_form_validation($mform, $data, $errors) {
+        $mode = $data['mode'] ?? constants::MODE_IMAGE;
+        $skins = recorder::get_skin_options($mode);
+        if ($mode !== constants::MODE_IMAGE && !array_key_exists($data['recorderskin'] ?? '', $skins)) {
+            $errors['recorderskin'] = get_string('skinnotformode', constants::M_COMPONENT);
+        }
+        if (isset($data['timelimit']) && $data['timelimit'] < 0) {
+            $errors['timelimit'] = get_string('timelimitnegative', constants::M_COMPONENT);
+        }
+        return $errors;
     }
 
     /**
@@ -177,6 +313,10 @@ class repository_cloudpoodll extends repository
     public function print_search()
     {
         global $OUTPUT;
+
+        if ($this->is_recorder()) {
+            return $this->print_recorder();
+        }
 
         $currentprompt = optional_param('s', '', PARAM_TEXT);
         $currentstyle = optional_param('imagetype', 'flat vector illustration', PARAM_TEXT);
@@ -221,6 +361,74 @@ class repository_cloudpoodll extends repository
     }
 
     /**
+     * Render the audio or video recorder.
+     *
+     * The recorder needs JavaScript, which does not run in HTML added to the file picker, so it lives on
+     * its own page in an iframe. When the recording is converted, that page puts its URL in the hidden
+     * search field and submits the search form, which calls search().
+     *
+     * @return string
+     */
+    protected function print_recorder() {
+        global $OUTPUT;
+
+        [$width, $height] = $this->get_recorder()->get_dimensions();
+        $url = new moodle_url('/repository/cloudpoodll/recorder.php', [
+            'repo_id' => $this->id,
+            'ctx_id' => $this->context->id,
+        ]);
+        $context = [
+            'iframeurl' => $url->out(false),
+            'width' => $width + 20,
+            // Leave room under the recorder for the progress message.
+            'height' => $height + 70,
+            'title' => get_string('mode_' . $this->get_mode(), constants::M_COMPONENT),
+        ];
+        return $OUTPUT->render_from_template('repository_cloudpoodll/recorderform', $context);
+    }
+
+    /**
+     * Download a converted recording into a draft area and present it as a single result.
+     *
+     * @param array $results empty search results
+     * @return array
+     */
+    protected function search_recording($results) {
+        global $OUTPUT, $USER;
+
+        // Re-read the search text as a URL. The file picker cleans it as HTML.
+        $mediaurl = optional_param('s', '', PARAM_URL);
+        if ($mediaurl === '' || !utils::is_poodll_media_url($mediaurl)) {
+            return $results;
+        }
+
+        $fileinfo = $this->get_recorder()->download_to_draft($mediaurl);
+        if (!$fileinfo) {
+            return $results;
+        }
+
+        $sourceinfo = [
+            'contextid' => context_user::instance($USER->id)->id,
+            'component' => 'user',
+            'filearea' => 'draft',
+            'itemid' => $fileinfo['draftitemid'],
+            'filepath' => '/',
+            'filename' => $fileinfo['filename'],
+        ];
+        $results['list'][] = [
+            'title' => $fileinfo['filename'],
+            'shorttitle' => $fileinfo['filename'],
+            'thumbnail' => $OUTPUT->image_url(file_extension_icon($fileinfo['filename']))->out(false),
+            'thumbnail_height' => 64,
+            'thumbnail_width' => 64,
+            'source' => base64_encode(json_encode($sourceinfo)),
+            'url' => $fileinfo['drafturl'],
+        ];
+        $results['nosearch'] = true;
+        return $results;
+    }
+
+    /**
      * @return imagegen
      */
     public function get_imagegen() {
@@ -250,6 +458,10 @@ class repository_cloudpoodll extends repository
             'page' => $page,
             'pages' => 1,
         ];
+
+        if ($this->is_recorder()) {
+            return $this->search_recording($results);
+        }
 
         // Get the submitted prompt.
         $prompt = trim($searchtext ?? '');
@@ -423,11 +635,12 @@ class repository_cloudpoodll extends repository
     }
 
     /**
-     * No specific init needed.
+     * Create an image, an audio and a video instance when the repository is enabled.
      * @return bool
      */
     public static function plugin_init()
     {
+        utils::create_default_instances();
         return true;
     }
 
